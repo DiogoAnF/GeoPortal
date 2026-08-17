@@ -50,6 +50,32 @@ document.addEventListener("DOMContentLoaded", () => {
     L.control.layers(baseMaps, null, { collapsed: false }).addTo(map);
 
     // ==========================================
+    // DRONE IMAGERY LAYER
+    // ==========================================
+    const droneLayer = L.tileLayer('data/drone_orto/{z}/{x}/{y}.png', {
+        maxZoom: 22,
+        attribution: 'Orthomosaic Drone'
+    });
+
+    const toggleDrone = document.getElementById('toggle-drone');
+    
+    // Initialize drone layer based on checkbox state
+    if (toggleDrone && toggleDrone.checked) {
+        droneLayer.addTo(map);
+    }
+    
+    if (toggleDrone) {
+        toggleDrone.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                map.addLayer(droneLayer);
+                droneLayer.bringToFront(); // Ensure it stays visible over basemaps
+            } else {
+                map.removeLayer(droneLayer);
+            }
+        });
+    }
+
+    // ==========================================
     // LAYER STYLING & INTERACTION
     // ==========================================
 

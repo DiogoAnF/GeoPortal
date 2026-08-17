@@ -110,8 +110,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let totalMappedArea = 0;
 
     const createPopupContent = (properties, title) => {
-        const id = properties.id !== undefined ? properties.id : "N/D";
-        const area = properties.area ? parseFloat(properties.area) : 0;
+        const id = properties.id !== undefined ? properties.id : (properties.ID !== undefined ? properties.ID : "N/D");
+        const areaRaw = properties.area || properties.Area || properties.AREA;
+        const area = areaRaw ? parseFloat(areaRaw) : 0;
         
         let percentageText = "N/D";
         if (area > 0 && totalMappedArea > 0) {
@@ -191,15 +192,19 @@ document.addEventListener("DOMContentLoaded", () => {
             carreadores: { data: carreadoresData, title: "Carreadores", style: styles.carreadores }
         };
 
-        const leafletLayers = {};
-        const allBounds = L.latLngBounds();
+        const leafletLayers = [];
+        let allBounds = null;
 
         // 1. Calculate total mapped area across all layers
         Object.values(layerObjects).forEach(obj => {
             if (obj.data && obj.data.features) {
                 obj.data.features.forEach(f => {
-                    if (f.properties && f.properties.area) {
-                        totalMappedArea += parseFloat(f.properties.area);
+                    const props = f.properties;
+                    if (props) {
+                        const areaRaw = props.area || props.Area || props.AREA;
+                        if (areaRaw) {
+                            totalMappedArea += parseFloat(areaRaw);
+                        }
                     }
                 });
             }
@@ -213,7 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     onEachFeature: (f, l) => bindLayerInteractions(f, l, geoLayer, obj.title)
                 });
                 
-                leafletLayers[key] = geoLayer;
+                leafletLayers.push(geoLayer);
                 
                 // Add to map if toggle is checked
                 if (toggles[key] && toggles[key].checked) {
@@ -228,13 +233,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
                 }
 
-                // Extend total bounds
-                allBounds.extend(geoLayer.getBounds());
+                // Extend total bounds safely
+                const layerBounds = geoLayer.getBounds();
+                if (layerBounds.isValid()) {
+                    if (!allBounds) allBounds = layerBounds;
+                    else allBounds.extend(layerBounds);
+                }
             }
         }
 
         // Fit map bounds to the new layers if any were loaded successfully
-        if (allBounds.isValid()) {
+        if (allBounds && allBounds.isValid()) {
             map.fitBounds(allBounds);
         }
 

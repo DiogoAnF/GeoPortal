@@ -234,10 +234,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 // Extend total bounds safely
-                const layerBounds = geoLayer.getBounds();
-                if (layerBounds.isValid()) {
-                    if (!allBounds) allBounds = layerBounds;
-                    else allBounds.extend(layerBounds);
+                if (typeof geoLayer.getLayers === 'function' && geoLayer.getLayers().length > 0) {
+                    const layerBounds = geoLayer.getBounds();
+                    if (layerBounds.isValid()) {
+                        if (!allBounds) allBounds = layerBounds;
+                        else allBounds.extend(layerBounds);
+                    }
                 }
             }
         }
@@ -253,7 +255,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }).catch(error => {
         console.error("Erro no carregamento dos dados: ", error);
-        loadingScreen.innerHTML = `<div style="color: #ef4444; font-weight: bold; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">Erro crítico no carregamento das camadas.</div>`;
+        loadingScreen.innerHTML = `<div style="color: #ef4444; font-weight: bold; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">Erro crítico: ${error.message || error}<br><br><small style="color:#666;">${error.stack ? error.stack.replace(/\n/g, '<br>') : ''}</small></div>`;
     });
 
 });

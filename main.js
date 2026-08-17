@@ -15,10 +15,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // Initialize Map
-    // Move zoom control to bottom-right to not conflict with the sidebar toggle
     const map = L.map('map', {
         zoomControl: false
-    }).setView([-19.74, -47.93], 8);
+    }).setView([-19.74, -47.93], 15);
 
     L.control.zoom({
         position: 'bottomright'
@@ -62,7 +61,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const toggleDrone = document.getElementById('toggle-drone');
     
-    // Initialize drone layer based on checkbox state
     if (toggleDrone && toggleDrone.checked) {
         droneLayer.addTo(map);
     }
@@ -71,7 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleDrone.addEventListener('change', (e) => {
             if (e.target.checked) {
                 map.addLayer(droneLayer);
-                droneLayer.bringToFront(); // Ensure it stays visible over basemaps
+                droneLayer.bringToFront();
             } else {
                 map.removeLayer(droneLayer);
             }
@@ -79,32 +77,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ==========================================
-    // LAYER STYLING & INTERACTION
+    // LAND USE STYLES
     // ==========================================
 
-    const styleUberaba = {
-        color: "#3b82f6",     // Border color
-        weight: 2,            // Border width
-        opacity: 1,           // Border opacity
-        fillColor: "#60a5fa", // Fill color
-        fillOpacity: 0.4      // Fill opacity
-    };
-
-    const styleIRU = {
-        color: "#10b981",     
-        weight: 1.5,            
-        opacity: 0.8,           
-        fillColor: "#34d399", 
-        fillOpacity: 0.2      
+    const styles = {
+        pasto: { color: "#4ade80", weight: 2, fillColor: "#86efac", fillOpacity: 0.5 },
+        reserva: { color: "#065f46", weight: 2, fillColor: "#065f46", fillOpacity: 0.5 },
+        cana: { color: "#f59e0b", weight: 2, fillColor: "#fbbf24", fillOpacity: 0.5 },
+        sede: { color: "#dc2626", weight: 2, fillColor: "#ef4444", fillOpacity: 0.5 },
+        carreadores: { color: "#57534e", weight: 2, fillColor: "#78716c", fillOpacity: 0.5 }
     };
 
     const highlightFeature = (e) => {
         const layer = e.target;
         layer.setStyle({
             weight: 3,
-            color: '#f59e0b',
-            dashArray: '',
-            fillOpacity: 0.7
+            color: '#fef08a',
+            fillOpacity: 0.8
         });
         layer.bringToFront();
     };
@@ -113,39 +102,49 @@ document.addEventListener("DOMContentLoaded", () => {
         geojsonLayer.resetStyle(e.target);
     };
 
+    // ==========================================
+    // POPUP LOGIC & PERCENTAGE
+    // ==========================================
+
+    // Total area variable to calculate percentage
+    let totalMappedArea = 0;
+
     const createPopupContent = (properties, title) => {
-        let content = `<div class="popup-header">${title}</div><div class="popup-body">`;
-        for (const [key, value] of Object.entries(properties)) {
-            if (value !== null && value !== "") {
-                 content += `
-                    <div class="popup-row">
-                        <span class="popup-label">${key}</span>
-                        <span class="popup-value">${value}</span>
-                    </div>
-                `;
-            }
+        const id = properties.id !== undefined ? properties.id : "N/D";
+        const area = properties.area ? parseFloat(properties.area) : 0;
+        
+        let percentageText = "N/D";
+        if (area > 0 && totalMappedArea > 0) {
+            const perc = (area / totalMappedArea) * 100;
+            percentageText = perc.toFixed(2) + "%";
         }
-        content += `</div>`;
-        return content;
+
+        return `
+            <div class="popup-header">${title}</div>
+            <div class="popup-body">
+                <div class="popup-row">
+                    <span class="popup-label">ID</span>
+                    <span class="popup-value">${id}</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-label">Área</span>
+                    <span class="popup-value">${area.toFixed(2)} ha</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-label">% do Total Mapeado</span>
+                    <span class="popup-value">${percentageText}</span>
+                </div>
+            </div>
+        `;
     };
 
-    const onEachFeatureUberaba = (feature, layer, geojsonLayer) => {
+    const bindLayerInteractions = (feature, layer, geojsonLayer, title) => {
         layer.on({
             mouseover: highlightFeature,
             mouseout: (e) => resetHighlight(e, geojsonLayer)
         });
         if (feature.properties) {
-            layer.bindPopup(createPopupContent(feature.properties, "Dados - Uberaba 2025"));
-        }
-    };
-
-    const onEachFeatureIRU = (feature, layer, geojsonLayer) => {
-        layer.on({
-            mouseover: highlightFeature,
-            mouseout: (e) => resetHighlight(e, geojsonLayer)
-        });
-        if (feature.properties) {
-            layer.bindPopup(createPopupContent(feature.properties, "Dados - IRU_URA 2025"));
+            layer.bindPopup(createPopupContent(feature.properties, title));
         }
     };
 
@@ -155,58 +154,89 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const loadingScreen = document.getElementById('loading');
     
-    // Custom Checkboxes
-    const toggleIru = document.getElementById('toggle-iru');
-    const toggleUberaba = document.getElementById('toggle-uberaba');
+    // Checkboxes
+    const toggles = {
+        pasto: document.getElementById('toggle-pasto'),
+        reserva: document.getElementById('toggle-reserva'),
+        cana: document.getElementById('toggle-cana'),
+        sede: document.getElementById('toggle-sede'),
+        carreadores: document.getElementById('toggle-carreadores')
+    };
 
-    // Fetch both datasets simultaneously
+    // Helper to safely fetch geojson even if some files are missing
+    const fetchGeoJSON = async (url) => {
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+        } catch (e) {
+            console.warn(`Arquivo ignorado/não encontrado: ${url}`);
+            return null;
+        }
+    };
+
     Promise.all([
-        fetch('data/Uberaba_2025.geojson').then(response => {
-            if(!response.ok) throw new Error("Erro ao carregar Uberaba_2025");
-            return response.json();
-        }),
-        fetch('data/IRU_URA_2025.geojson').then(response => {
-            if(!response.ok) throw new Error("Erro ao carregar IRU_URA_2025");
-            return response.json();
-        })
-    ]).then(([uberabaData, iruData]) => {
+        fetchGeoJSON('data/pasto.geojson'),
+        fetchGeoJSON('data/reserva.geojson'),
+        fetchGeoJSON('data/cana.geojson'),
+        fetchGeoJSON('data/sede.geojson'),
+        fetchGeoJSON('data/carreadores.geojson')
+    ]).then(([pastoData, reservaData, canaData, sedeData, carreadoresData]) => {
         
-        let uberabaLayer;
-        let iruLayer;
+        const layerObjects = {
+            pasto: { data: pastoData, title: "Pasto", style: styles.pasto },
+            reserva: { data: reservaData, title: "Reserva", style: styles.reserva },
+            cana: { data: canaData, title: "Área de Cana", style: styles.cana },
+            sede: { data: sedeData, title: "Sede", style: styles.sede },
+            carreadores: { data: carreadoresData, title: "Carreadores", style: styles.carreadores }
+        };
 
-        uberabaLayer = L.geoJSON(uberabaData, {
-            style: styleUberaba,
-            onEachFeature: (f, l) => onEachFeatureUberaba(f, l, uberabaLayer)
-        });
+        const leafletLayers = {};
+        const allBounds = L.latLngBounds();
 
-        iruLayer = L.geoJSON(iruData, {
-            style: styleIRU,
-            onEachFeature: (f, l) => onEachFeatureIRU(f, l, iruLayer)
-        });
-
-        // Initialize layers based on checkbox state
-        if (toggleIru.checked) iruLayer.addTo(map);
-        if (toggleUberaba.checked) uberabaLayer.addTo(map);
-
-        // Map Checkboxes to Layers
-        toggleIru.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                map.addLayer(iruLayer);
-            } else {
-                map.removeLayer(iruLayer);
+        // 1. Calculate total mapped area across all layers
+        Object.values(layerObjects).forEach(obj => {
+            if (obj.data && obj.data.features) {
+                obj.data.features.forEach(f => {
+                    if (f.properties && f.properties.area) {
+                        totalMappedArea += parseFloat(f.properties.area);
+                    }
+                });
             }
         });
 
-        toggleUberaba.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                map.addLayer(uberabaLayer);
-            } else {
-                map.removeLayer(uberabaLayer);
-            }
-        });
+        // 2. Create Leaflet layers
+        for (const [key, obj] of Object.entries(layerObjects)) {
+            if (obj.data) {
+                const geoLayer = L.geoJSON(obj.data, {
+                    style: obj.style,
+                    onEachFeature: (f, l) => bindLayerInteractions(f, l, geoLayer, obj.title)
+                });
+                
+                leafletLayers[key] = geoLayer;
+                
+                // Add to map if toggle is checked
+                if (toggles[key] && toggles[key].checked) {
+                    geoLayer.addTo(map);
+                }
 
-        // Fit map bounds to IRU layer
-        map.fitBounds(iruLayer.getBounds());
+                // Attach event listeners
+                if (toggles[key]) {
+                    toggles[key].addEventListener('change', (e) => {
+                        if (e.target.checked) map.addLayer(geoLayer);
+                        else map.removeLayer(geoLayer);
+                    });
+                }
+
+                // Extend total bounds
+                allBounds.extend(geoLayer.getBounds());
+            }
+        }
+
+        // Fit map bounds to the new layers if any were loaded successfully
+        if (allBounds.isValid()) {
+            map.fitBounds(allBounds);
+        }
 
         // Hide loading
         loadingScreen.style.opacity = '0';
@@ -214,7 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }).catch(error => {
         console.error("Erro no carregamento dos dados: ", error);
-        loadingScreen.innerHTML = `<div style="color: #ef4444; font-weight: bold; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">Erro ao carregar os dados geográficos: ${error.message}.<br><br>Para carregar os arquivos GeoJSON, este portal precisa ser executado por um servidor local.</div>`;
+        loadingScreen.innerHTML = `<div style="color: #ef4444; font-weight: bold; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">Erro crítico no carregamento das camadas.</div>`;
     });
 
 });

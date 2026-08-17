@@ -126,15 +126,8 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     };
 
-    const bindLayerInteractions = (feature, layer, geojsonLayer, title) => {
-        layer.on({
-            mouseover: highlightFeature,
-            mouseout: (e) => resetHighlight(e, geojsonLayer)
-        });
-        if (feature.properties) {
-            layer.bindPopup(createPopupContent(feature.properties, title));
-        }
-    };
+    // The popup logic remains the same
+
 
     // ==========================================
     // FETCH AND LOAD DATA
@@ -182,12 +175,21 @@ document.addEventListener("DOMContentLoaded", () => {
         const leafletLayers = [];
         let allBounds = null;
 
-        // 1. Create Leaflet layers
+        // 2. Create Leaflet layers
         for (const [key, obj] of Object.entries(layerObjects)) {
             if (obj.data) {
-                const geoLayer = L.geoJSON(obj.data, {
+                let geoLayer;
+                geoLayer = L.geoJSON(obj.data, {
                     style: obj.style,
-                    onEachFeature: (f, l) => bindLayerInteractions(f, l, geoLayer, obj.title)
+                    onEachFeature: (f, l) => {
+                        l.on({
+                            mouseover: highlightFeature,
+                            mouseout: (e) => geoLayer.resetStyle(e.target)
+                        });
+                        if (f.properties) {
+                            l.bindPopup(createPopupContent(f.properties, obj.title));
+                        }
+                    }
                 });
                 
                 leafletLayers.push(geoLayer);

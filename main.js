@@ -53,7 +53,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // DRONE IMAGERY LAYER
     // ==========================================
     const droneLayer = L.tileLayer('data/drone_orto/{z}/{x}/{y}.png', {
+        minZoom: 15,
         maxZoom: 22,
+        zIndex: 10,
+        tms: false,
         attribution: 'Orthomosaic Drone'
     });
 

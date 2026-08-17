@@ -1,9 +1,28 @@
 // main.js
 document.addEventListener("DOMContentLoaded", () => {
     
+    // Sidebar Logic
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebarClose = document.getElementById('sidebar-close');
+
+    sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.add('open');
+    });
+
+    sidebarClose.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+    });
+
     // Initialize Map
-    // Coordinates roughly centered on Uberaba / Minas Gerais
-    const map = L.map('map').setView([-19.74, -47.93], 8);
+    // Move zoom control to bottom-right to not conflict with the sidebar toggle
+    const map = L.map('map', {
+        zoomControl: false
+    }).setView([-19.74, -47.93], 8);
+
+    L.control.zoom({
+        position: 'bottomright'
+    }).addTo(map);
 
     // ==========================================
     // BASEMAPS
@@ -19,19 +38,16 @@ document.addEventListener("DOMContentLoaded", () => {
         attribution: 'Tiles © Esri'
     });
 
-    const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors © CARTO'
-    });
-
-    // Set default basemap
-    cartoLight.addTo(map);
+    // Set OSM as default basemap
+    osm.addTo(map);
 
     const baseMaps = {
-        "Carto Positron (Claro)": cartoLight,
         "OpenStreetMap (Padrão)": osm,
         "Esri Satélite (Imagem)": esriImagery
     };
+
+    // Add only basemaps to native control
+    L.control.layers(baseMaps, null, { collapsed: false }).addTo(map);
 
     // ==========================================
     // LAYER STYLING & INTERACTION
@@ -108,10 +124,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // FETCH AND LOAD DATA
     // ==========================================
 
-    const overlayMaps = {};
-    const layerControl = L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
-    
     const loadingScreen = document.getElementById('loading');
+    
+    // Custom Checkboxes
+    const toggleIru = document.getElementById('toggle-iru');
+    const toggleUberaba = document.getElementById('toggle-uberaba');
 
     // Fetch both datasets simultaneously
     Promise.all([
@@ -138,15 +155,28 @@ document.addEventListener("DOMContentLoaded", () => {
             onEachFeature: (f, l) => onEachFeatureIRU(f, l, iruLayer)
         });
 
-        // Add layers to the control and map
-        layerControl.addOverlay(uberabaLayer, "Uberaba_2025");
-        layerControl.addOverlay(iruLayer, "IRU_URA_2025");
-        
-        // Add layers to map by default
-        iruLayer.addTo(map);
-        uberabaLayer.addTo(map);
+        // Initialize layers based on checkbox state
+        if (toggleIru.checked) iruLayer.addTo(map);
+        if (toggleUberaba.checked) uberabaLayer.addTo(map);
 
-        // Fit map bounds to IRU layer (which probably contains the larger extent)
+        // Map Checkboxes to Layers
+        toggleIru.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                map.addLayer(iruLayer);
+            } else {
+                map.removeLayer(iruLayer);
+            }
+        });
+
+        toggleUberaba.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                map.addLayer(uberabaLayer);
+            } else {
+                map.removeLayer(uberabaLayer);
+            }
+        });
+
+        // Fit map bounds to IRU layer
         map.fitBounds(iruLayer.getBounds());
 
         // Hide loading
@@ -155,7 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }).catch(error => {
         console.error("Erro no carregamento dos dados: ", error);
-        loadingScreen.innerHTML = `<div style="color: #ef4444; font-weight: bold; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">Erro ao carregar os dados geográficos: ${error.message}.<br><br>Para carregar os arquivos GeoJSON, este portal precisa ser executado por um servidor local (ex: extensão Live Server do VSCode) e não apenas abrindo o arquivo index.html.</div>`;
+        loadingScreen.innerHTML = `<div style="color: #ef4444; font-weight: bold; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">Erro ao carregar os dados geográficos: ${error.message}.<br><br>Para carregar os arquivos GeoJSON, este portal precisa ser executado por um servidor local.</div>`;
     });
 
 });

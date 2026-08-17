@@ -22,10 +22,61 @@
     </header>
 
     <main>
+        <!-- Sidebar Toggle Button (Absolute over map) -->
+        <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Abrir Camadas">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+        </button>
+
+        <!-- Sidebar Panel -->
+        <aside id="sidebar" class="sidebar open">
+            <div class="sidebar-header">
+                <h2>Camadas de Dados</h2>
+                <button id="sidebar-close" class="sidebar-close" aria-label="Fechar Aba">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="sidebar-content">
+                <!-- Layer Item: IRU -->
+                <div class="layer-item">
+                    <div class="layer-info">
+                        <div class="layer-color-box" style="background-color: rgba(52, 211, 153, 0.4); border: 2px solid #10b981;"></div>
+                        <span class="layer-name">IRU_URA_2025</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-iru" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                
+                <!-- Layer Item: Uberaba -->
+                <div class="layer-item">
+                    <div class="layer-info">
+                        <div class="layer-color-box" style="background-color: rgba(96, 165, 250, 0.4); border: 2px solid #3b82f6;"></div>
+                        <span class="layer-name">Uberaba_2025</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-uberaba" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Loading Screen -->
         <div id="loading">
             <div class="spinner"></div>
             <div class="loading-text">Carregando dados geográficos...</div>
         </div>
+        
+        <!-- Map Container -->
         <div id="map"></div>
     </main>
 

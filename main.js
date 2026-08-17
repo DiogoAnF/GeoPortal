@@ -106,19 +106,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // POPUP LOGIC & PERCENTAGE
     // ==========================================
 
-    // Total area variable to calculate percentage
-    let totalMappedArea = 0;
-
     const createPopupContent = (properties, title) => {
         const id = properties.id !== undefined ? properties.id : (properties.ID !== undefined ? properties.ID : "N/D");
         const areaRaw = properties.area || properties.Area || properties.AREA;
         const area = areaRaw ? parseFloat(areaRaw) : 0;
-        
-        let percentageText = "N/D";
-        if (area > 0 && totalMappedArea > 0) {
-            const perc = (area / totalMappedArea) * 100;
-            percentageText = perc.toFixed(2) + "%";
-        }
 
         return `
             <div class="popup-header">${title}</div>
@@ -130,10 +121,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="popup-row">
                     <span class="popup-label">Área</span>
                     <span class="popup-value">${area.toFixed(2)} ha</span>
-                </div>
-                <div class="popup-row">
-                    <span class="popup-label">% do Total Mapeado</span>
-                    <span class="popup-value">${percentageText}</span>
                 </div>
             </div>
         `;
@@ -195,22 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const leafletLayers = [];
         let allBounds = null;
 
-        // 1. Calculate total mapped area across all layers
-        Object.values(layerObjects).forEach(obj => {
-            if (obj.data && obj.data.features) {
-                obj.data.features.forEach(f => {
-                    const props = f.properties;
-                    if (props) {
-                        const areaRaw = props.area || props.Area || props.AREA;
-                        if (areaRaw) {
-                            totalMappedArea += parseFloat(areaRaw);
-                        }
-                    }
-                });
-            }
-        });
-
-        // 2. Create Leaflet layers
+        // 1. Create Leaflet layers
         for (const [key, obj] of Object.entries(layerObjects)) {
             if (obj.data) {
                 const geoLayer = L.geoJSON(obj.data, {
